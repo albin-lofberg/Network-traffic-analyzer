@@ -1,28 +1,39 @@
 #include <pcap/pcap.h> 
+
+#include <iomanip>
+#include <cstdio>
 #include <iostream>
 
-// Used to check if libpcap is installed and working properly
-int main() {
-    std::cout << pcap_lib_version() << std::endl;
+//called for every packet, prints one line describing packet
+static void on_packet(u_char*, const pcap_pkthdr* header, const u_char*){
+    std::cout << header->ts.tv_sec << '.' << std::setfill('0') << std::setw(6)
+    << header->ts.tv_usec << " caplen" << header->caplen << " len" << header->len 
+    << std::endl;
+}
 
-    // Checks if libpcap can lookup list capture interfaces
-    // prints the error and exits with code 1 if lookup fails
+int main(int argc, char** argv){
+
+    if (argc != 2){
+        std::cerr << "usage: too many or too few arguments";
+        return 2;
+    } 
+
     char errbuf[PCAP_ERRBUF_SIZE] = {};
-    pcap_if_t* alldevs = nullptr;
-    if (pcap_findalldevs(&alldevs, errbuf) == PCAP_ERROR) {
-        std::cerr << "Error finding devices: " << errbuf << std::endl;
+
+    pcap_t* handle = pcap_open_live(argv[1], 65535, 1, 1000, errbuf);
+    if (handle == nullptr){
+        std::cerr << "Can't open " << argv[1] << ": " << errbuf << std::endl;
         return 1;
     }
 
-    for (const pcap_if_t* d = alldevs; d != nullptr; d = d->next){
-        std::cout << d->name;
-        if (d->description != nullptr){
-            std::cout << " -" << d->description << "-";
-        } 
-        std::cout << std::endl;
+    //captures 10 packets, returns after 10 loops - result 0 if success
+    const int result = pcap_loop(handle, 10, on_packet, nullptr);
+    if (result == PCAP_ERROR){
+        std::cerr << pcap_geterr(handle) << std::endl;
+        return 1;
     }
 
-    pcap_freealldevs(alldevs);
+
+    pcap_close(handle);
     return 0;
 }
-
