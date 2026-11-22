@@ -1,0 +1,9 @@
+Interface names
+1: lo - (loopback, traffic to own machine)
+2: eth0 - (wired)
+
+.gitignore to not push .pcap files (large files + contains my ip)
+
+cmake -S . -B build
+cmake --build build -- RUN these three commands separetely to build and run code
+./build/analyzer

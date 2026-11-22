@@ -1,0 +1,7 @@
+I'm basically building tcpdump
+Inspired by my use of wireshark in TDTS06
+
+offline mode - for testing (used in TDTS06 labs - useful for testing) 
+
+I did not make CMakeLists - didn't get much of it but had claude explain it too me. 
+I get the gist but don't really understand the code
