@@ -1,7 +1,33 @@
 I'm basically building tcpdump
 Inspired by my use of wireshark in TDTS06
 
+---------------------
 offline mode - for testing (used in TDTS06 labs - useful for testing) 
 
+---------------------
 I did not make CMakeLists - didn't get much of it but had claude explain it too me. 
 I get the gist but don't really understand the code
+
+---------------------
+with constructors:
+    inside {} body, variables are created then set. Doesn't work with const
+        since constants can't be modified.
+    if const then use : 
+
+    ex PcapCapture::PcapCapture(Handle handle, bool live)
+        : handle_(std::move(handle)), live_(live) {}
+
+    is the same as writing
+        PcapCapture::PcapCapture(Handle handle, bool live){
+            bool live_ = live;
+            //also initialize handle
+        }
+
+libpcap requires user to be u_char. But to access member variables 
+    (packet_callback_, error_) the trampoline needs to have the PcapCapture pointer label. 
+    so use reinterpret_cast to change pointer label to and from u_char. 
+
+Packet goes from kernel->libpcap->trampoline->code
+
+C has no exceptions, so no exception may ever travel up to libpcap. 
+    Or maybe, more rather, C can't handle c++ errors

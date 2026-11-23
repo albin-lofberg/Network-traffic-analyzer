@@ -13,7 +13,7 @@ if(NOT PCAP_INCLUDE_DIR OR NOT PCAP_LIBRARY)
 endif()
 
 
-add_executable(analyzer src/main.cpp)
-target_include_directories(analyzer PRIVATE ${PCAP_INCLUDE_DIR})
+add_executable(analyzer src/main.cpp src/pcap_capture.cpp)
+target_include_directories(analyzer PRIVATE ${PCAP_INCLUDE_DIR} src)
 target_link_libraries(analyzer PRIVATE ${PCAP_LIBRARY})
 target_compile_options(analyzer PRIVATE -Wall -Wextra -Wpedantic)
