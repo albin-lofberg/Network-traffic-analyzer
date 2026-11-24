@@ -101,3 +101,7 @@ std::optional<pcap_stat> PcapCapture::stats() const {
 bool PcapCapture::is_live() const{
     return live_;
 }
+
+int PcapCapture::link_type() const {
+    return pcap_datalink(session_.get());
+}

@@ -20,6 +20,7 @@ public:
 
     bool is_live() const;
     std::string link_type_name() const;
+    int link_type() const;
 
     std::optional<pcap_stat> stats() const;
 

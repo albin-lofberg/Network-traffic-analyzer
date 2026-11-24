@@ -29,5 +29,29 @@ libpcap requires user to be u_char. But to access member variables
 
 Packet goes from kernel->libpcap->trampoline->code
 
+trampoline is static, so it can't access member variables like other functions in the class.
+    it builds its own pointer using user argument and calls it self.
+
+why static? Libpcap can only call plain function. A normal member function isn't plain
+    A member function secretly takes this as parameter. Libpcap doesn't know about
+    this which is why it doesn't work. 
+
 C has no exceptions, so no exception may ever travel up to libpcap. 
     Or maybe, more rather, C can't handle c++ errors
+
+
+
+Small simple types (int, bool, std::size_t, pointers): pass by value.
+Bigger or non-trivial types (std::string, structs, vectors): pass by const& if you only read them.
+Outputs you want to change: pass by plain &.
+
+Truncated means we lost bytes (a small snaplen). Malformed means the sender's bytes are inconsistent. 
+
+No exceptions in decoder because of libpcap being C. You'd need a try/catch 
+    in the callback every time. Since if decode through, it'd travel up to libpcap
+    (C) which can't unwind -> BAD. Kinda. It wouldn't crash since trampoline has 
+    try/catch but it would end with an error on every bad packet. And bad packets
+    are common
+
+
+
