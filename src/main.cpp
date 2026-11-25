@@ -13,6 +13,8 @@
 
 #include "pcap_capture.hpp"
 #include "decoder.hpp"
+#include "classifier.hpp"
+#include "filter.hpp"
 
 namespace {
     PcapCapture* g_capture = nullptr;
@@ -61,22 +63,29 @@ namespace {
 }
 
 
-int main(int argc, char** argv){
-    CLI::App app{"analyzer - a small network traffic analyzer (phase 2)"};
+int main(int argc, char** argv) {
+    CLI::App app{"analyzer - a small network traffic analyzer (phase 3)"};
 
     bool list = false;
-    std::string interface;
+    std::string interface_name;
     std::string pcap_file;
+    std::string filter_text;
+    std::string raw_bpf;
     int count = 0;
 
     app.add_flag("-l,--list-interfaces", list, "List capture interfaces and exit");
     auto* interface_opt =
-        app.add_option("-i,--interface", interface, "Interface to capture on");
+        app.add_option("-i,--interface", interface_name, "Interface to capture on");
     auto* file_opt = app.add_option("-r,--read", pcap_file, "Read packets from a pcap file")
                          ->check(CLI::ExistingFile);
     app.add_option("-c,--count", count, "Stop after N packets (0 = no limit)")
         ->check(CLI::NonNegativeNumber);
+    auto* filter_opt = app.add_option(
+        "-f,--filter", filter_text,
+        "Filter, e.g. \"protocol:https src:10.0.0.5\" (keys: protocol src dst host port srcport dstport)");
+    auto* bpf_opt = app.add_option("--bpf", raw_bpf, "Raw BPF expression, e.g. \"tcp port 443\"");
     interface_opt->excludes(file_opt);
+    filter_opt->excludes(bpf_opt);
 
     CLI11_PARSE(app, argc, argv);
 
@@ -85,13 +94,21 @@ int main(int argc, char** argv){
             list_interfaces();
             return 0;
         }
-        if (interface.empty() && pcap_file.empty()) {
+        if (interface_name.empty() && pcap_file.empty()) {
             std::cerr << "error: give an interface (-i) or a pcap file (-r). See --help.\n";
             return 2;
         }
 
-        PcapCapture capture = pcap_file.empty() ? PcapCapture::open_live(interface)
+        PcapCapture capture = pcap_file.empty() ? PcapCapture::open_live(interface_name)
                                                 : PcapCapture::open_offline(pcap_file);
+        // Our syntax -> BPF string -> kernel (or libpcap, for files). Packets that do
+        // not match never reach the callback.
+        const std::string bpf = filter_text.empty() ? raw_bpf : filter::to_bpf(filter_text);
+        if (!bpf.empty()) {
+            capture.set_filter(bpf);
+            std::cerr << "filter: " << bpf << '\n';
+        }
+
         g_capture = &capture;
         install_signal_handlers();
 
@@ -103,9 +120,16 @@ int main(int argc, char** argv){
         capture.run(count, [&](const pcap_pkthdr& header, const u_char* bytes) {
             ++packets;
             const decoder::Packet p = decoder::decode(link_type, bytes, header.caplen);
-            if (p.status != decoder::Status::Ok) ++not_ok;
-            std::printf("%s  %s\n", format_time(header.ts).c_str(),
-                        decoder::describe(p).c_str());
+            if (p.status != decoder::Status::Ok) {
+                ++not_ok;
+            }
+            const classifier::Result result = classifier::classify(p, bytes, header.caplen);
+            std::string line = decoder::describe(p);
+            if (result.app != classifier::App::Unknown) {
+                line += std::string("  ") + classifier::app_name(result.app) + " (" +
+                        classifier::basis_name(result.basis) + ")";
+            }
+            std::printf("%s  %s\n", format_time(header.ts).c_str(), line.c_str());
         });
         g_capture = nullptr;
 
@@ -115,6 +139,9 @@ int main(int argc, char** argv){
                       << " dropped by kernel";
         }
         std::cout << '\n';
+    } catch (const filter::FilterError& e) {
+        std::cerr << "filter error: " << e.what() << '\n';
+        return 2;
     } catch (const std::exception& e) {
         std::cerr << "error: " << e.what() << '\n';
         return 1;

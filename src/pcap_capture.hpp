@@ -14,6 +14,8 @@ public:
     static PcapCapture open_live(const std::string& interface);
     static PcapCapture open_offline(const std::string& path);
 
+    void set_filter(const std::string& bpf_expression);
+
     void run(int count, PacketCallback packet_callback_);
 
     void stop();

@@ -55,3 +55,7 @@ No exceptions in decoder because of libpcap being C. You'd need a try/catch
 
 
 
+
+
+
+Learned ternary operator ?, kinda cool i like it

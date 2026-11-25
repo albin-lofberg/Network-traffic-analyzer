@@ -105,3 +105,20 @@ bool PcapCapture::is_live() const{
 int PcapCapture::link_type() const {
     return pcap_datalink(session_.get());
 }
+
+void PcapCapture::set_filter(const std::string& bpf_expression) {
+
+    bpf_program program{};
+    if (pcap_compile(session_.get(), &program, bpf_expression.c_str(), 1,
+                     PCAP_NETMASK_UNKNOWN) == PCAP_ERROR) {
+        throw std::runtime_error("invalid filter '" + bpf_expression +
+                                 "': " + pcap_geterr(session_.get()));
+    }
+
+    std::unique_ptr<bpf_program, void (*)(bpf_program*)> guard(&program, &pcap_freecode);
+
+    if (pcap_setfilter(session_.get(), &program) == PCAP_ERROR) {
+        throw std::runtime_error(std::string("cannot install filter: ") +
+                                 pcap_geterr(session_.get()));
+    }
+}

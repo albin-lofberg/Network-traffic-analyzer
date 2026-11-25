@@ -20,7 +20,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(CLI11)
 
-add_executable(analyzer src/main.cpp src/pcap_capture.cpp src/decoder.cpp)
+add_executable(
+  analyzer 
+  src/main.cpp 
+  src/pcap_capture.cpp 
+  src/decoder.cpp 
+  src/classifier.cpp
+  src/filter.cpp)
 target_include_directories(analyzer PRIVATE ${PCAP_INCLUDE_DIR} src)
 target_link_libraries(analyzer PRIVATE ${PCAP_LIBRARY})
 target_compile_options(analyzer PRIVATE -Wall -Wextra -Wpedantic)

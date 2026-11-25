@@ -2,3 +2,5 @@ build/
 *.pcap
 tools/
 tests/
+samples/
+notes.txt
