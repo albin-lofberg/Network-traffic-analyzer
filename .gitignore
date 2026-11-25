@@ -1,4 +1,5 @@
 build/
+build-asan/
 *.pcap
 tools/
 tests/
